@@ -141,6 +141,10 @@ const validateHashes = async (directory, hashFile="hashes.json") => {
 	deletedFiles.forEach(file => console.log(`File ${file} was deleted`))
 	addedFiles.forEach(file => console.log(`File ${file} added`))
 	renamedFiles.forEach(file => console.log(`File name change detected, ${file.originalPath} renamed to ${file.newPath}`))
+	if (renamedFiles.length > 0) {
+		console.log("regenerating hash table")
+		await generateTable(directory)
+	}
 	validFiles.forEach(file => console.log(
 		`File ${renamedFiles.map(file => file.originalPath).includes(path) ? file.originalPath : file.newPath} is valid`))
 	invalidFiles.forEach(file => console.log(`File ${file.originalPath} is invalid`))
@@ -148,9 +152,6 @@ const validateHashes = async (directory, hashFile="hashes.json") => {
 		
 		
 
-	if (renamedFiles.legnth > 0) {
-		await generateTable(directory)
-	}
 	
 }
 
