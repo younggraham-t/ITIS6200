@@ -89,14 +89,6 @@ const validateHashes = async (directory, hashFile="hashes.json") => {
 	const hashesFromFile = await readFile(hashFilePath).then((contents) => JSON.parse(contents))
 	
 
-	
-	let updateTable = false
-	
-		// console.log(hashFile)
-		
-		
-	
-		
 	const matches = hashTable.map((file) => {
 		const innerMap = hashesFromFile.map((hashFile) => {
 			const pathMatch = file.filepath === hashFile.filepath
@@ -112,9 +104,6 @@ const validateHashes = async (directory, hashFile="hashes.json") => {
 
 			}
 		})
-		
-
-
 
 		return innerMap
 
@@ -159,7 +148,7 @@ const validateHashes = async (directory, hashFile="hashes.json") => {
 		
 		
 
-	if (updateTable) {
+	if (renamedFiles.legnth > 0) {
 		await generateTable(directory)
 	}
 	
