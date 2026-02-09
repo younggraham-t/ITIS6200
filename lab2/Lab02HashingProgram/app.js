@@ -78,8 +78,53 @@ const generateTable = async (directory) => {
 }
 
 
-const directory = prompt("enter a directory: ")
-const hashes = await generateTable(directory);
+const validateHashes = async (directory, hashFile) => {
+	const hashTable = await traverseDirectory(directory)
+	
 
+	
+	const hashFilePath = path.join(cwd, hashFile)
+	const hashesFromFile = await readFile(hashFilePath).then((contents) => JSON.parse(contents))
+	
+	if (hashTable.length !== hashesFromFile.length) {
+		console.log("Mismatch of number of hashes")
+	}
+	
+	
+	for (const file of hashesFromFile) {
+		let hashMatch = false
+		for (const hashFile of hashTable) {
+			if (file.filepath === hashFile.filepath 
+			&& file.hash === hashFile.hash) {
+				hashMatch = true
+
+			}
+		}
+
+		if (hashMatch === true) {
+			console.log(file.filepath + " is valid")
+		}
+		else {
+			console.log(file.filepath + "is not valid")
+		}
+
+
+	}
+	
+}
+
+
+const userChoices = {
+	generateHash: generateTable,
+	validateHash: validateHashes,
+}
+
+const directory = prompt("enter a directory: ")
+await generateTable(directory);
+
+
+const hashesFile = "hashes.json"
+
+await validateHashes(directory, hashesFile)
 
 
