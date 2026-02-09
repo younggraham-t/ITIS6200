@@ -36,7 +36,7 @@ const getFiles = (directory) => {
 }
 
 const hashFile = async (file) => {
-	console.log(file)
+	// console.log(file)
 	const filePath = path.join(cwd, file)
 	const fileBuffer = await readFile(filePath).catch((err) => {
 		console.log(err)
@@ -65,11 +65,15 @@ const traverseDirectory = async (directory) => {
 
 
 const generateTable = async (directory) => {
+	//check if there is already a hashtable for the directory
 	// look through directory and generate hashes
 	const hashTable = await traverseDirectory(directory)
 	// store table in json file
 	const jsonText = JSON.stringify(hashTable)
-	await writeFile("hashes.json", jsonText, "utf-8")
+	let hashFile = prompt("Do you wish to enter a custom hash table file path? (Default './hashes.json')", {value: "hashes.json"})
+
+	hashFile = path.join(cwd, hashFile)
+	await writeFile(hashFile, jsonText, "utf-8")
 		.then(() => console.log("Hash table Generated"))
 		.catch((err) => { console.log(err) })
 	
@@ -78,53 +82,61 @@ const generateTable = async (directory) => {
 }
 
 
-const validateHashes = async (directory, hashFile) => {
-	const hashTable = await traverseDirectory(directory)
+const validateHashes = async (directory) => {
 	
-
+	const hashFile = prompt("Do you wish to enter a custom hash table file path? (Default './hashes.json')", {value: "hashes.json"})
+	
+	const hashTable = await traverseDirectory(directory)
 	
 	const hashFilePath = path.join(cwd, hashFile)
 	const hashesFromFile = await readFile(hashFilePath).then((contents) => JSON.parse(contents))
 	
-	if (hashTable.length !== hashesFromFile.length) {
-		console.log("Mismatch of number of hashes")
-	}
-	
-	
-	for (const file of hashesFromFile) {
-		let hashMatch = false
-		for (const hashFile of hashTable) {
-			if (file.filepath === hashFile.filepath 
-			&& file.hash === hashFile.hash) {
-				hashMatch = true
 
+	
+	let updateTable = false
+	
+	for (const hashFile of hashTable) {
+		// console.log(hashFile)
+		
+		const hashMatch = hashesFromFile.some(file => file.hash === hashFile.hash) 
+		const filepathMatch = hashesFromFile.some(file => file.filepath === hashFile.filepath) 
+
+		// console.log(filepathMatch + " filepath match")
+		// console.log(hashMatch + " hash match")
+		
+
+		
+		if (hashMatch) {
+			console.log(hashFile.filepath + " is valid")
+			if (!filepathMatch) {
+				console.log("File name has changed updating hash table after all checks")
+				updateTable = true
 			}
 		}
-
-		if (hashMatch === true) {
-			console.log(file.filepath + " is valid")
-		}
 		else {
-			console.log(file.filepath + "is not valid")
+			console.log(hashFile.filepath + " is not valid")
+
 		}
+		
 
-
+	}
+	if (updateTable) {
+		await generateTable(directory)
 	}
 	
 }
+
 
 
 const userChoices = {
-	generateHash: generateTable,
-	validateHash: validateHashes,
+	"G": generateTable,
+	"V": validateHashes,
 }
 
-const directory = prompt("enter a directory: ")
-await generateTable(directory);
+const userChoice = prompt("Choose whether to Generate or Validate: [G/V] Generate by default ", {value: "G"})
+userChoice.toUpperCase()
+const directory = prompt("Enter a directory: (default /testFiles)", {value: "/testFiles"})
 
-
-const hashesFile = "hashes.json"
-
-await validateHashes(directory, hashesFile)
+await userChoices[userChoice](directory)
 
 
