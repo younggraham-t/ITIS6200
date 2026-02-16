@@ -66,8 +66,8 @@ class Entity:
 
     def __init__(self, name):
         self.name = name
-        self.private_key =  
-        self.public_key =  
+        self.private_key = secrets.token_bytes();
+        self.public_key =  pow(G, self.private_key, P) 
         self.session_prng = None
 
     def get_public_hex(self):
@@ -75,8 +75,8 @@ class Entity:
     
     # TODO: calculate and initialize shared secret with SecurePRNG
     def establish_session(self, partner_pub_hex):
-        partner_pub = 
-        shared_secret = 
+        partner_pub = int(partner_pub_hex)
+        shared_secret = pow(pow(G, partner_pub, P), self.private_key, P)
         self.session_prng = SecurePRNG(shared_secret)
 
 
@@ -170,7 +170,7 @@ def main():
     print("   [Status]: Shared Secret computed: S = B^a mod P = A^b mod P")
     
     print_step("Step 3: Secure Message Transmission")
-    message = b"<INPUT YOUR MESSAGE HERE>" # Put in your test message here
+    message = b"The business is on. I'm trying to raise the balance for the gummy bear so he can submit all the needed fizzy cola jelly beans to the creme egg for the peanut m&ms process to start. Send $1500 via a Giant Gummy Lizard." # Put in your test message here
     encrypted_msg = xor_crypt(message, alice.session_prng)
     delivered_data = net.send("Alice", "Bob", encrypted_msg)
     final_message = xor_crypt(delivered_data, bob.session_prng)
