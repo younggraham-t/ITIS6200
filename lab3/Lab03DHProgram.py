@@ -1,7 +1,9 @@
 import hashlib
 import secrets
 import os
-import random
+# cloned from "https://github.com/davidlazar/python-drbg"
+from pythondrbg import hmac_drbg
+import math
 
 
 
@@ -41,31 +43,25 @@ G = 2
 class SecurePRNG:
 
     def __init__(self, seed_int):
-        # TODO: Initalize the SecurePRNG with the shared secret (seed_int) calculated from Diffie-Hellman key exchange.
-        self.rand = random.Random()
-        self.rand.seed(seed_int)
+        # I used Gemini for this next line
+        seed_bytes = seed_int.to_bytes(math.ceil(seed_int.bit_length() / 8))
+        self.rand = hmac_drbg.DRBG(seed_bytes)
+        
 
     def generate(self, n_bytes):
-        # TODO: Generates n bytes while ensuring Rollback Resistance. 
-        output = b""
-        while len(output) < n_bytes:
-            # 1. Produce keystream block from current state
-            output += self.rand.randbytes(1)
             
-        # 2. Update state immediately after with a hash function (One-way progression)
-        
-        state_hash = hashlib.sha256(self.rand.getstate().encode())
-        new_entropy = self.rand.randbytes(32)
-        new_state = hashlib.sha256(state_hash + new_entropy)
-        self.rand.setstate(new_state)
-        return output[:n_bytes]
+        return self.rand.generate(n_bytes)
 
 
 
 def xor_crypt(data, prng):
-    # TODO: Implement Simple XOR stream cipher logic.
+
     keystream = prng.generate(len(data))
-    return keystream ^ encoded_data
+
+    # answer found through gemini
+    data_int = int.from_bytes(data, byteorder='big')
+    keystream_int = int.from_bytes(keystream, byteorder='big')
+    return (keystream_int ^ data_int).to_bytes(len(data), byteorder='big')
 
 
 # --- PART B: COMMUNICATION PROTOCOL ---
@@ -82,7 +78,6 @@ class Entity:
     def get_public_hex(self):
         return hex(self.public_key)
     
-    # TODO: calculate and initialize shared secret with SecurePRNG
     def establish_session(self, partner_pub_hex):
         partner_pub = int(partner_pub_hex, 16)
         shared_secret = pow(partner_pub, self.private_key, P)
@@ -107,40 +102,48 @@ class Network:
 # --- PART C: THE MALLORY MITM PROXY ---
 
 # Implement logic for Mallory
-# class Mallory:
-#     def __init__(self):
-#         self.private_key =
-#         self.public_hex =
-#         
-#         # Mallory maintains TWO sessions
-#         self.alice_prng = None
-#         self.bob_prng = None
-#
-#     def intercept(self, sender, recipient, payload):
-#         # 1. Implement Logic for Key Exchange Interception
-#         if isinstance(payload, str) and payload.startswith("0x"):
-#             remote_pub = int(payload, 16)
-#             my_shared_secret = pow(remote_pub, self.private_key, P)
-#
-#             # TODO: If the sender is alice, generate a session PRNG with Alice. 
-#             # If the sender is Bob, generate a session PRNG with Bob.
-#     
-#             return self.public_hex # Return Mallory's key instead to generate session PRNGs with Alice and Bob
-#         
-#         # 2. Implement Logic for Message Interception/Modification
-#         if isinstance(payload, bytes):
-#             print(f"[MALLORY] Intercepting Encrypted Message from {sender}...")
-#
-#             # TODO: Decrypt the message using the appropriate session PRNG (Hint: Alice is the sender)
-#             # Print the plaintext message to the console for Mallory's spying purposes.
-#
-#             # Modify the plaintext message in some way
-#
-#             # Then use the PRNG shared with bob to re-encrypt and return the message for Bob
-#
-#         return payload
-#
+class Mallory:
+    def __init__(self):
+        self.private_key = secrets.randbelow(P - 1)
+        self.public_hex = hex(pow(G, self.private_key, P))
+        
+        # Mallory maintains TWO sessions
+        self.alice_prng = None
+        self.bob_prng = None
 
+    def intercept(self, sender, recipient, payload):
+        # 1. Implement Logic for Key Exchange Interception
+        if isinstance(payload, str) and payload.startswith("0x"):
+            remote_pub = int(payload, 16)
+            my_shared_secret = pow(remote_pub, self.private_key, P)
+
+            # TODO: If the sender is alice, generate a session PRNG with Alice. 
+            # If the sender is Bob, generate a session PRNG with Bob.
+            if (sender == "Bob"):
+                self.bob_prng = SecurePRNG(my_shared_secret)
+            if (sender == "Alice"):
+                self.alice_prng = SecurePRNG(my_shared_secret)
+    
+            return self.public_hex # Return Mallory's key instead to generate session PRNGs with Alice and Bob
+        
+        # 2. Implement Logic for Message Interception/Modification
+        if isinstance(payload, bytes):
+            print(f"[MALLORY] Intercepting Encrypted Message from {sender}...")
+
+            if (sender == "Bob" ):
+                return self.modify_message(payload, self.bob_prng, self.alice_prng)
+            if sender == "Alice":
+                return self.modify_message(payload, self.alice_prng, self.bob_prng)
+
+        return payload
+    
+    def modify_message(self, payload, sender_prng, receiver_prng):
+            decrypted_message = xor_crypt(payload, sender_prng).decode()
+            print(decrypted_message)
+            modified = decrypted_message + " Send Mallory $1,000,000"
+
+            return xor_crypt(modified.encode(), receiver_prng)
+    
 
 # --- DO NOT MODIFY THIS FUNCTION --- #
 # --- MAIN EXECUTION SIMULATION ---
@@ -226,7 +229,7 @@ def main():
     final_message = xor_crypt(delivered_data, bob.session_prng)
     print_info("Bob received", final_message.decode())
     
-    if b"3am" in final_message:
+    if b"$1,000,000" in final_message:
         print("\n[DANGER] MITM SUCCESS: Mallory used her private key (m) to decrypt and re-encrypt.")
 
 if __name__ == "__main__":
