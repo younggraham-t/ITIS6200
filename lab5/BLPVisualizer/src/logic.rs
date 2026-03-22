@@ -19,9 +19,8 @@ impl SecurityLevel {
 
 
 #[derive(Clone)]
-pub struct Subject {
+struct Subject {
     name: String,
-    start_sec_level: SecurityLevel,
     max_sec_level: SecurityLevel,
     cur_operating_level: SecurityLevel,
 }
@@ -34,7 +33,6 @@ impl Subject {
 
         Ok(Subject {
                 name: name,
-                start_sec_level: start_sec_level.clone(),
                 max_sec_level: max_sec_level,
                 cur_operating_level: start_sec_level,
             }
@@ -42,14 +40,19 @@ impl Subject {
     }
 
     pub fn set_level(&mut self, new_level: SecurityLevel) {
+        // don't allow level to decrease or go above maximum level
         if new_level <= self.max_sec_level && new_level >= self.cur_operating_level {
             self.cur_operating_level = new_level;
         }
     }
+
+    fn as_str(&self) -> String {
+        format!("[Subject] {}: CurLvl={}, MaxLvl={}", self.name, self.cur_operating_level.as_str(), self.max_sec_level.as_str())
+    }
 }
 
 #[derive(Clone)]
-pub struct Object {
+struct Object {
     name: String,
     sec_level: SecurityLevel,
 }
@@ -60,6 +63,9 @@ impl Object {
            name: name,
            sec_level: sec_level,
        } 
+    }
+    fn as_str(&self) -> String {
+        format!("[Object] {}: Lvl={}", self.name, self.sec_level.as_str())
     }
 }
 
@@ -85,7 +91,7 @@ pub struct Request {
 }
 
 impl Request {
-    pub fn new(subject: Subject, object: Object, req_type: RequestType) -> Request {
+    fn new(subject: Subject, object: Object, req_type: RequestType) -> Request {
 
         Request {
             subject, 
@@ -216,6 +222,14 @@ impl BLPModel {
     }
     
     pub fn print_current_state(&self) {
+        println!("--- Current BLP State ---");
+        for subject in &self.subjects {
+            println!("{}", subject.as_str());
+        }
+        for object in &self.objects {
+            println!("{}", object.as_str());
+        }
+        println!("-------------------------");
         
     }
 
