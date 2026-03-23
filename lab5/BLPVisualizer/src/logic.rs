@@ -47,7 +47,7 @@ impl Subject {
     }
 
     fn as_str(&self) -> String {
-        format!("[Subject] {}: CurLvl={}, MaxLvl={}", self.name, self.cur_operating_level.as_str(), self.max_sec_level.as_str())
+        format!("(Subject) {}: CurLvl={}, MaxLvl={}", self.name, self.cur_operating_level.as_str(), self.max_sec_level.as_str())
     }
 }
 
@@ -65,7 +65,7 @@ impl Object {
        } 
     }
     fn as_str(&self) -> String {
-        format!("[Object] {}: Lvl={}", self.name, self.sec_level.as_str())
+        format!("(Object) {}: Lvl={}", self.name, self.sec_level.as_str())
     }
 }
 
@@ -92,7 +92,6 @@ pub struct Request {
 
 impl Request {
     fn new(subject: Subject, object: Object, req_type: RequestType) -> Request {
-
         Request {
             subject, 
             object,
@@ -103,15 +102,34 @@ impl Request {
     }
 
     pub fn as_str(&self) -> String {
+        
         let allow_string;
-        if self.allowed {
-            allow_string = format!("TRUE\tObj Lvl ({}) <= Subj Max ({})", self.object.sec_level.as_str(), self.subject.max_sec_level.as_str());
-        }
-        else {
+        //format "allow" section Read requests need to have different signs for allow/disallow
+        //compared to Write requests
+        match self.request_type {
+           RequestType::Read => {
 
-            allow_string = format!("FALSE\tObj Lvl ({}) > Subj Max ({})", self.object.sec_level.as_str(), self.subject.max_sec_level.as_str());
+                if self.allowed {
+                    allow_string = format!("TRUE\tObj Lvl ({}) <= Subj Max ({})", self.object.sec_level.as_str(), self.subject.max_sec_level.as_str());
+                }
+                else {
+
+                    allow_string = format!("FALSE\tObj Lvl ({}) > Subj Max ({})", self.object.sec_level.as_str(), self.subject.max_sec_level.as_str());
+                }
+           },
+           RequestType::Write => {
+               
+                if self.allowed {
+                    allow_string = format!("TRUE\tObj Lvl ({}) >= Subj Curr ({})", self.object.sec_level.as_str(), self.subject.max_sec_level.as_str());
+                }
+                else {
+
+                    allow_string = format!("FALSE\tObj Lvl ({}) < Subj Curr ({})", self.object.sec_level.as_str(), self.subject.max_sec_level.as_str());
+                }
+           }
+           
         }
-        format!("Action: {} {} {} \nAllow: {} \nINFO: {}", self.subject.name, self.request_type.as_str(), self.object.name, allow_string, self.info)
+        format!("> Action: {} {} {} \n> Allow: {} \n> INFO: {}", self.subject.name, self.request_type.as_str(), self.object.name, allow_string, self.info)
 
     }
 }
@@ -154,71 +172,64 @@ impl BLPModel {
     //     return subject.cur_operating_level == object.sec_level;
     // }
 
-    fn get_subject_by_name(&self, name: &str) -> Result<&Subject, String> {
-        for subject in &self.subjects {
-            if subject.name == name {
-                return Ok (subject)
-            }
-        }
-        Err("no matching subject with that name".to_string())
 
-    }
-    
-    
-    fn get_object_by_name(&self, name: &str) -> Result<&Object, String> {
-        for object in &self.objects {
-            if object.name == name {
-                
-                return Ok (object)
-            }
-        }
-        Err("no matching object with that name".to_string())
-
-    }
-
-    pub fn read(&self, subject_name: &str, object_name: &str) -> Result<Request, String> {
+    pub fn read(&mut self, subject_name: &str, object_name: &str) -> Result<Request, String> {
         //get the object and subject
-        let subject_res = self.get_subject_by_name(subject_name);
-        let object_res = self.get_object_by_name(object_name);
-        let subject: Option<Subject>;
-        let object: Option<Object>;
-
-        match subject_res {
-            Ok(s) => subject = Some(s.clone()),
-            Err(e) => {
-                subject = None;
-                println!("failed to make check: {}", e)
-
-            },
+        let subject = self.subjects.iter_mut().find(|s| s.name == subject_name).ok_or("Cannot find subject")?;
+        let object = self.objects.iter().find(|o| o.name == object_name).ok_or("Cannot find object")?;
+        
+            
+        let allowed;
+        let mut info: String = "".to_string();
+        //subject is allowed to read if their cur_level is above that of the object's
+        if subject.cur_operating_level >= object.sec_level {
+           allowed = true;
         }
-        match object_res {
-            Ok(o) => object = Some(o.clone()),
-            Err(e) => {
-                object = None;
-                println!("failed to make check: {}", e)
-
-            },
+        //subject also allowed if their max_level is above that of the object's
+        else if subject.max_sec_level >= object.sec_level {
+            allowed = true;
+            subject.set_level(object.sec_level.clone());
+            info = format!("Raising {}'s level to {}", subject.name, object.sec_level.as_str()).to_string()
         }
-        if let Some(object) = object && let Some(subject) = subject {
-            let mut req = Request::new(subject, object, RequestType::Read);
-            // make chack if the subject can read the object
-            if req.subject.cur_operating_level >= req.object.sec_level {
-               req.allowed = true;
-            }
-            else if req.subject.max_sec_level >= req.object.sec_level {
-                req.subject.set_level(req.object.sec_level.clone());
-                req.allowed = true;
-                req.info = format!("Raising {}'s level to {}", req.subject.name, req.object.sec_level.as_str()).to_string()
-            }
-            else {
-                req.allowed = false;
-            }
+        else {
+            allowed = false;
+        }
 
-            return Ok(req);
+        Ok(Request {
+            subject: subject.clone(),
+            object: object.clone(),
+            request_type: RequestType::Read,
+            allowed,
+            info,
+            
+        })
+        
+        
+    }
+
+    pub fn write(&mut self, subject_name: &str, object_name: &str) -> Result<Request, String> {
+
+        let subject = self.subjects.iter_mut().find(|s| s.name == subject_name).ok_or("Cannot find subject")?;
+        let object = self.objects.iter().find(|o| o.name == object_name).ok_or("Cannot find object")?;
+        
+        let allowed;
+        let info: String = "".to_string();
+        //subject is allowed to write if their level is lower than or equal to the object's
+        if subject.cur_operating_level <= object.sec_level {
+           allowed = true;
+        }
+        else {
+            allowed = false;
         }
         
-        Err("Failed to find object/subject".to_string())
-        
+        Ok(Request {
+            subject: subject.clone(),
+            object: object.clone(),
+            request_type: RequestType::Write,
+            allowed,
+            info,
+            
+        })
     }
     
     pub fn print_current_state(&self) {
