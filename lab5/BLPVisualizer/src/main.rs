@@ -4,8 +4,10 @@ use crate::logic::BLPModel;
 
 mod logic;
 
-fn init_blp_model(blp_model: &mut BLPModel) {
-    println!("Initializing Default State");
+fn init_blp_model() -> BLPModel {
+    println!("[System] Initializing Default State");
+    
+    let mut blp_model = BLPModel::new();
     //add subjects
     blp_model.add_subject("Alice".to_string(), SecurityLevel::U, SecurityLevel::S);
     blp_model.add_subject("Bob".to_string(), SecurityLevel::C, SecurityLevel::C);
@@ -17,6 +19,7 @@ fn init_blp_model(blp_model: &mut BLPModel) {
     blp_model.add_object("username.txt".to_string(), SecurityLevel::S);
     blp_model.add_object("password.txt".to_string(), SecurityLevel::TS);
     
+    blp_model
 }
 
 fn print_results(res: Result<Request, String>, blp_model: &BLPModel) {
@@ -33,26 +36,87 @@ fn print_results(res: Result<Request, String>, blp_model: &BLPModel) {
 
 
 fn main() {
-    let mut blp_model = BLPModel::new();
     
-    init_blp_model(&mut blp_model);
      
 
 
     //Case 1
     println!("============Case 1============");
-    init_blp_model(&mut blp_model);
+    let mut blp_model = init_blp_model();
     let mut res = blp_model.read("Alice", "emails.txt");
     print_results(res, &blp_model);
     
 
     //Case 2
     println!("============Case 2============");
-    init_blp_model(&mut blp_model);
+    blp_model = init_blp_model();
     res = blp_model.read("Alice", "password.txt");
     print_results(res, &blp_model);
     
     
+    //Case 3
+    println!("============Case 3============");
+    blp_model = init_blp_model();
+    res = blp_model.read("Eve", "pub.txt");
+    print_results(res, &blp_model);
+    
+    
+    //Case 4
+    println!("============Case 4============");
+    blp_model = init_blp_model();
+    res = blp_model.read("Eve", "emails.txt");
+    print_results(res, &blp_model);
 
 
+    //Case 5
+    println!("============Case 5============");
+    blp_model = init_blp_model();
+    res = blp_model.read("Bob", "password.txt");
+    print_results(res, &blp_model);
+    
+    
+    //Case 6
+    println!("============Case 6============");
+    blp_model = init_blp_model();
+    res = blp_model.read("Alice", "emails.txt");
+    print_results(res, &blp_model);
+    res = blp_model.write("Alice", "pub.txt");
+    print_results(res, &blp_model);
+    
+    
+    //Case 7
+    println!("============Case 7============");
+    blp_model = init_blp_model();
+    res = blp_model.read("Alice", "emails.txt");
+    print_results(res, &blp_model);
+    res = blp_model.write("Alice", "password.txt");
+    print_results(res, &blp_model);
+    
+    
+    //Case 8
+    println!("============Case 8============");
+    blp_model = init_blp_model();
+    res = blp_model.read("Alice", "emails.txt");
+    print_results(res, &blp_model);
+    res = blp_model.write("Alice", "emails.txt");
+    print_results(res, &blp_model);
+    res = blp_model.read("Alice", "username.txt");
+    print_results(res, &blp_model);
+    res = blp_model.write("Alice", "emails.txt");
+    print_results(res, &blp_model);
+    
+    
+    //Case 9
+    println!("============Case 9============");
+    blp_model = init_blp_model();
+    res = blp_model.read("Alice", "username.txt");
+    print_results(res, &blp_model);
+    res = blp_model.write("Alice", "emails.txt");
+    print_results(res, &blp_model);
+    res = blp_model.read("Alice", "password.txt");
+    print_results(res, &blp_model);
+    res = blp_model.write("Alice", "password.txt");
+    print_results(res, &blp_model);
+    
+    
 }
