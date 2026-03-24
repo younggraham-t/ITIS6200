@@ -39,11 +39,13 @@ impl Subject {
         )
     }
 
-    pub fn set_level(&mut self, new_level: SecurityLevel) {
+    pub fn set_level(&mut self, new_level: SecurityLevel) -> Result<(), String> {
         // don't allow level to decrease or go above maximum level
         if new_level <= self.max_sec_level && new_level >= self.cur_operating_level {
             self.cur_operating_level = new_level;
+            return Ok(());
         }
+        Err("cannot set new level".to_string())
     }
 
     fn as_str(&self) -> String {
@@ -231,6 +233,17 @@ impl BLPModel {
             
         })
     }
+    
+    pub fn set_level(&mut self, subject_name: &str, new_level: SecurityLevel) -> Result<(), String> {
+
+        //get the subject
+        let subject = self.subjects.iter_mut().find(|s| s.name == subject_name).ok_or("Cannot find subject")?;
+
+        //set subject level 
+        return subject.set_level(new_level);
+
+    } 
+
     
     pub fn print_current_state(&self) {
         println!("--- Current BLP State ---");
