@@ -174,12 +174,26 @@ fn main() {
     //Case 15
     println!("============Case 15============");
     blp_model = init_blp_model();
-    let level = blp_model.set_level("Alice", SecurityLevel::S);
+    blp_model.set_level("Alice", SecurityLevel::S);
+    blp_model.print_current_state();
+    res = blp_model.read("Alice", "username.txt");
     print_results(&res, &blp_model);
+
+
+    //Case 16
+    println!("============Case 16============");
+    blp_model = init_blp_model();
+    res = blp_model.read("Alice", "emails.txt");
+    print_results(&res, &blp_model);
+    blp_model.set_level("Alice", SecurityLevel::U);
+    blp_model.print_current_state();
     res = blp_model.write("Alice", "pub.txt");
     print_results(&res, &blp_model);
     res = blp_model.read("Eve", "pub.txt");
     print_results(&res, &blp_model);
-
-
+    
+    
+    
+    
+    
 }
