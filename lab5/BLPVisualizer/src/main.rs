@@ -193,7 +193,25 @@ fn main() {
     print_results(&res, &blp_model);
     
     
+    //Case 17
+    println!("============Case 17============");
+    blp_model = init_blp_model();
+    res = blp_model.read("Alice", "username.txt");
+    print_results(&res, &blp_model);
+    blp_model.set_level("Alice", SecurityLevel::C);
+    blp_model.print_current_state();
+    res = blp_model.write("Alice", "emails.txt");
+    print_results(&res, &blp_model);
+    res = blp_model.read("Eve", "emails.txt");
+    print_results(&res, &blp_model);
     
     
+    //Case 18
+    println!("============Case 18============");
+    blp_model = init_blp_model();
+    res = blp_model.read("Eve", "pub.txt");
+    print_results(&res, &blp_model);
+    res = blp_model.read("Eve", "emails.txt");
+    print_results(&res, &blp_model);
     
 }
