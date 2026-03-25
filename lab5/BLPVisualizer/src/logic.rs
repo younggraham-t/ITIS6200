@@ -99,15 +99,6 @@ pub struct Request {
 }
 
 impl Request {
-    fn new(subject: Subject, object: Object, req_type: RequestType) -> Request {
-        Request {
-            subject, 
-            object,
-            request_type: req_type,
-            allowed: false,
-            info: "".to_string(),
-        }
-    }
 
     pub fn as_str(&self) -> String {
         
@@ -196,9 +187,14 @@ impl BLPModel {
         //subject also allowed if their max_level is above that of the object's
         else if subject.max_sec_level >= object.sec_level {
             allowed = true;
-            subject.set_level(object.sec_level.clone());
-            info = format!("Raising {}'s level to {}", subject.name, object.sec_level.as_str()).to_string()
-        }
+            let subject_level_check = subject.set_level(object.sec_level.clone());
+            match subject_level_check {
+                Ok(()) => info = format!("Raising {}'s level to {}", subject.name, object.sec_level.as_str()).to_string()
+,
+                Err(e) => println!("{}", e)
+
+            }
+                    }
         else {
             allowed = false;
         }
