@@ -39,18 +39,19 @@ impl Subject {
         )
     }
 
-    pub fn set_level(&mut self, new_level: SecurityLevel) {
+    fn set_level(&mut self, new_level: SecurityLevel) -> Result<(), String> {
         // don't allow level to decrease or go above maximum level
         if new_level <= self.max_sec_level {
             if new_level >= self.cur_operating_level {
                 self.cur_operating_level = new_level;
+                return Ok(());
             }
             else {
-                println!("subject {} cannot set level to {}: level ({}) < SubjCurr ({})", self.as_str(), new_level.as_str(), new_level.as_str(), self.cur_operating_level.as_str());
+                return Err(format!("{} cannot set level to {}: level ({}) < SubjCurr ({})", self.as_str(), new_level.as_str(), new_level.as_str(), self.cur_operating_level.as_str()));
                 
             }
         }
-        println!("cannot set new level");
+        Err(format!("{} cannot set level to {}: level ({}) > SubjMax ({})", self.as_str(), new_level.as_str(), new_level.as_str(), self.max_sec_level.as_str()))
     }
 
     fn as_str(&self) -> String {
@@ -239,15 +240,24 @@ impl BLPModel {
         })
     }
     
-    pub fn set_level(&mut self, subject_name: &str, new_level: SecurityLevel) -> Result<(), String> {
+    pub fn set_level(&mut self, subject_name: &str, new_level: SecurityLevel) {
 
         //get the subject
-        let subject = self.subjects.iter_mut().find(|s| s.name == subject_name).ok_or("Cannot find subject")?;
+        let subject_search = self.subjects.iter_mut().find(|s| s.name == subject_name);
 
-        //set subject level 
-        subject.set_level(new_level);
 
-        Ok(())
+        if let Some(subject) = subject_search {
+            //set subject level 
+            match subject.set_level(new_level.clone()) {
+                Ok(()) => println!("{} successfully changed level to {}", subject.as_str(), new_level.as_str()),
+                Err(e) => println!("{}", e)
+
+            }
+
+        }
+        else {
+            println!("Cannot find subject from name: {}", subject_name)
+        }
 
     } 
 
